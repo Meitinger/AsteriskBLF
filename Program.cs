@@ -71,9 +71,9 @@ namespace Aufbauwerk.Asterisk.BLF
             if (!e.Observed) Exit(e.Exception, -2147483640 /* E_FAIL */);
         }
 
-        private static void HandleEndOfServerTask(Task task, CancellationTokenSource cancellationSource)
+        private static void HandleEndOfServerTask(Task task, CancellationToken cancellationToken)
         {
-            if (cancellationSource.IsCancellationRequested) return; // to be expected
+            if (cancellationToken.IsCancellationRequested) return; // to be expected
 
             Exception exception;
             if (task.IsCanceled) exception = new TaskCanceledException();
@@ -86,11 +86,11 @@ namespace Aufbauwerk.Asterisk.BLF
 
         private static void Start()
         {
-            var cancellationSource = new CancellationTokenSource();
+            _cancellationSource = new CancellationTokenSource(); // static variable must not be captured
+            var cancellationToken = _cancellationSource.Token;
             Task.Factory.ContinueWhenAny(
-                Settings.Instance.Servers.Select(s => Server.RunAsync(s, cancellationSource.Token)).ToArray(),
-                task => HandleEndOfServerTask(task, cancellationSource));
-            _cancellationSource = cancellationSource; // static variable must not be captured
+                Settings.Instance.Servers.Select(s => Server.RunAsync(s, cancellationToken)).ToArray(),
+                task => HandleEndOfServerTask(task, cancellationToken));
         }
 
         private static void Stop()

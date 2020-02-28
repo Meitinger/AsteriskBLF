@@ -46,6 +46,7 @@ namespace Aufbauwerk.Asterisk.BLF
             private readonly Dictionary<string, DeviceState> _deviceStateUpdates;
             private readonly Func<string, DeviceState, Task> _updateFunction;
             private readonly CancellationTokenSource _cancellationSource;
+            private readonly CancellationToken _cancellationToken;
             private bool _disposed = false;
             private Task _currentUpdate = null;
 
@@ -56,6 +57,7 @@ namespace Aufbauwerk.Asterisk.BLF
                 _deviceStateUpdates = new Dictionary<string, DeviceState>();
                 _updateFunction = updateFunction ?? throw new ArgumentNullException(nameof(updateFunction));
                 _cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+                _cancellationToken = _cancellationSource.Token;
                 UpdateCallbacks += UpdateDeviceStates;
                 lock (_global) UpdateDeviceStates(_global);
             }
@@ -93,10 +95,10 @@ namespace Aufbauwerk.Asterisk.BLF
             {
                 while (!_disposed)
                 {
-                    _cancellationSource.Token.ThrowIfCancellationRequested();
+                    _cancellationToken.ThrowIfCancellationRequested();
                     var device = update.Key;
                     var state = update.Value;
-                    var succeeded = await Server.TryOrWaitAsync(_settings, _cancellationSource.Token, () => _updateFunction(device, state));
+                    var succeeded = await Server.TryOrWaitAsync(_settings, _cancellationToken, () => _updateFunction(device, state));
                     lock (_mutex)
                     {
                         if (succeeded)
